@@ -586,22 +586,28 @@ def mount_cache(args, workspace):
         yield
         return
 
+    root = os.path.join(workspace, "root")
+
+    # bind mount root to avoid problems with package managers doing so when it's
+    # not a mountpoint
+    mount_bind(root, root)
+
     # We can't do this in mount_image() yet, as /var itself might have to be created as a subvolume first
     with complete_step('Mounting Package Cache'):
         if args.distribution in (Distribution.fedora, Distribution.mageia):
-            mount_bind(args.cache_path, os.path.join(workspace, "root", "var/cache/dnf"))
+            mount_bind(args.cache_path, os.path.join(root, "var/cache/dnf"))
         elif args.distribution in (Distribution.debian, Distribution.ubuntu):
-            mount_bind(args.cache_path, os.path.join(workspace, "root", "var/cache/apt/archives"))
+            mount_bind(args.cache_path, os.path.join(root, "var/cache/apt/archives"))
         elif args.distribution == Distribution.arch:
-            mount_bind(args.cache_path, os.path.join(workspace, "root", "var/cache/pacman/pkg"))
+            mount_bind(args.cache_path, os.path.join(root, "var/cache/pacman/pkg"))
         elif args.distribution == Distribution.opensuse:
-            mount_bind(args.cache_path, os.path.join(workspace, "root", "var/cache/zypp/packages"))
+            mount_bind(args.cache_path, os.path.join(root, "var/cache/zypp/packages"))
     try:
         yield
     finally:
         with complete_step('Unmounting Package Cache'):
-            for d in ("var/cache/dnf", "var/cache/apt/archives", "var/cache/pacman/pkg", "var/cache/zypp/packages"):
-                umount(os.path.join(workspace, "root", d))
+            for d in ("var/cache/dnf", "var/cache/apt/archives", "var/cache/pacman/pkg", "var/cache/zypp/packages", ""):
+                umount(os.path.join(root, d))
 
 def umount(where):
     # Ignore failures and error messages
